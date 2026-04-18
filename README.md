@@ -1,110 +1,197 @@
-# MyProfile App 📱
+# Notes App 📝 — Tugas Praktikum Minggu 5
 
-Aplikasi profil pribadi berbasis **Kotlin Multiplatform + Compose Multiplatform** yang dapat berjalan di **Android** dan **Desktop (JVM)** dari satu codebase.
+Pengembangan **Notes App** dengan fitur navigasi multi-screen berbasis **Kotlin Multiplatform + Compose Multiplatform**.
 
-> Tugas Praktikum Minggu 3 — IF25-22017 Pengembangan Aplikasi Mobile  
-> Institut Teknologi Sumatera
-
----
-
-## Tampilan Aplikasi
-
-| Bagian | Deskripsi |
-|--------|-----------|
-| Header | Foto profil circular, nama, dan title |
-| Tentang Saya | Bio/deskripsi singkat |
-| Informasi Kontak | Email, Phone, Location, GitHub (bisa disembunyikan) |
-| Skill & Teknologi | Chip-chip skill yang dimiliki |
-| Action Buttons | Tombol Edit Profil & Bagikan |
+> Tugas Praktikum Minggu 5 — IF25-22017 Pengembangan Aplikasi Mobile  
+> Institut Teknologi Sumatera  
+> **Nama:** Giovan Lado  
+> **NIM:** 123140068  
+> **Branch:** `week-5`
 
 ---
 
-## Struktur Project
+## Fitur yang Diimplementasikan
+
+| # | Fitur | Status |
+|---|-------|--------|
+| 1 | Bottom Navigation (Notes, Favorites, Profile) | ✅ |
+| 2 | Note List → Note Detail dengan passing `noteId` | ✅ |
+| 3 | Floating Action Button → Add Note Screen | ✅ |
+| 4 | Back navigation yang proper dari semua screens | ✅ |
+| 5 | Edit Note screen dengan passing `noteId` sebagai argument | ✅ |
+
+---
+
+## Navigation Flow Diagram
+
+```
+╔══════════════════════════════════════════════════════╗
+║           BOTTOM NAVIGATION BAR                      ║
+║    [📝 Notes]   [❤️ Favorites]   [👤 Profile]        ║
+╚══════════════════════════════════════════════════════╝
+         │               │               │
+         ▼               ▼               ▼
+    ┌─────────┐    ┌───────────┐    ┌─────────┐
+    │  Notes  │    │ Favorites │    │ Profile │
+    │  Screen │    │  Screen   │    │ Screen  │
+    └────┬────┘    └─────┬─────┘    └─────────┘
+         │               │
+    [Klik Note]     [Klik Note]
+         │               │
+         └───────┬────────┘
+                 ▼
+         ┌───────────────┐
+         │  Note Detail  │◀─────────────────┐
+         │    Screen     │                  │
+         └───────┬───────┘                  │
+                 │                          │
+            [Klik Edit]                  [Back]
+                 │                          │
+                 ▼                          │
+         ┌───────────────┐                  │
+         │  Edit Note    │──────────────────┘
+         │    Screen     │
+         └───────────────┘
+
+    [FAB +]
+         │
+         ▼
+    ┌───────────┐
+    │ Add Note  │
+    │  Screen   │
+    └───────────┘
+```
+
+**Route Arguments:**
+- `note_detail/{noteId}` → `noteId: Int`
+- `edit_note/{noteId}` → `noteId: Int`
+
+---
+
+## Struktur Folder
 
 ```
 composeApp/src/commonMain/kotlin/com/example/myprofile/
 │
-├── App.kt                  ← Entry point utama aplikasi
+├── App.kt                          ← Entry point, Scaffold + BottomNav
+│
+├── navigation/
+│   ├── Screen.kt                   ← Sealed class route definitions
+│   └── AppNavigation.kt            ← NavHost dengan semua destinations
+│
+├── screens/
+│   ├── NotesScreen.kt              ← Daftar catatan + FAB Add Note
+│   ├── NoteDetailScreen.kt         ← Detail catatan (passing noteId)
+│   ├── AddNoteScreen.kt            ← Form tambah catatan baru
+│   ├── EditNoteScreen.kt           ← Form edit catatan (passing noteId)
+│   ├── FavoritesScreen.kt          ← Daftar catatan favorit
+│   └── ProfileScreen.kt            ← Profil pengguna
+│
+├── components/
+│   └── BottomNavBar.kt             ← NavigationBar dengan 3 tabs
+│
+├── data/
+│   ├── NoteRepository.kt           ← CRUD operations untuk Note
+│   ├── NoteUiState.kt              ← UI state untuk Notes
+│   ├── ProfileRepository.kt        ← Persistent storage profil
+│   └── ProfileUiState.kt           ← UI state untuk Profile
 │
 ├── model/
-│   └── ProfileData.kt      ← Data class profil pengguna
+│   ├── Note.kt                     ← Data class Note
+│   └── ProfileData.kt              ← Data class Profile
 │
-├── ui/
-│   ├── ProfileHeader.kt    ← Composable 1: Header + avatar circular
-│   ├── InfoItem.kt         ← Composable 2: Baris info (icon + label + nilai)
-│   ├── ProfileCard.kt      ← Composable 3: Card section generik
-│   └── SkillChip.kt        ← Composable 4: Chip skill/teknologi
+├── viewmodel/
+│   ├── NoteViewModel.kt            ← ViewModel untuk Notes
+│   └── ProfileViewModel.kt         ← ViewModel untuk Profile
+│
+├── ui/                             ← Reusable UI components (dari minggu lalu)
+│   ├── ProfileHeader.kt
+│   ├── ProfileCard.kt
+│   ├── InfoItem.kt
+│   ├── EditProfileForm.kt
+│   └── SkillChip.kt
 │
 └── theme/
-    └── Theme.kt            ← Warna dan konstanta tema aplikasi
+    └── Theme.kt                    ← Warna dan konstanta tema
 ```
 
 ---
 
-## Composable Functions
+## Penjelasan Navigation Component
 
-### 1. `ProfileHeader`
-Menampilkan bagian atas halaman profil dengan avatar berbentuk lingkaran, nama, dan title/jabatan di atas background gradient biru.
-
+### `Screen.kt` — Route Definitions
 ```kotlin
-ProfileHeader(
-    name = "Giovan Lado",
-    title = "Data Engineer | ITERA"
-)
-```
+sealed class Screen(val route: String) {
+    object Notes     : Screen("notes")
+    object Favorites : Screen("favorites")
+    object Profile   : Screen("profile")
 
-### 2. `InfoItem`
-Satu baris informasi yang terdiri dari icon berwarna, label kecil, dan nilai. Digunakan berulang untuk Email, Phone, Location, dan GitHub.
-
-```kotlin
-InfoItem(
-    icon = Icons.Filled.Email,
-    label = "Email",
-    value = "giovan.123140068@itera.ac.id",
-    iconTint = Color.Red
-)
-```
-
-### 3. `ProfileCard`
-Card section generik dengan header (icon + judul) dan slot konten fleksibel menggunakan trailing lambda. Digunakan 3 kali untuk Bio, Kontak, dan Skills.
-
-```kotlin
-ProfileCard(title = "Tentang Saya", icon = Icons.Filled.Person) {
-    Text("isi konten bebas di sini")
+    object NoteDetail : Screen("note_detail/{noteId}") {
+        fun createRoute(noteId: Int) = "note_detail/$noteId"
+    }
+    object EditNote : Screen("edit_note/{noteId}") {
+        fun createRoute(noteId: Int) = "edit_note/$noteId"
+    }
+    object AddNote : Screen("add_note")
 }
 ```
 
-### 4. `SkillChip`
-Chip berbentuk pill kecil untuk menampilkan satu skill atau teknologi. Digunakan berulang dalam grid skills.
-
+### Passing Arguments antar Screen
 ```kotlin
-SkillChip(skill = "Kotlin")
+// Navigate dengan argument
+navController.navigate(Screen.NoteDetail.createRoute(noteId = 42))
+// → route: "note_detail/42"
+
+// Menerima argument di destination
+composable(
+    route = Screen.NoteDetail.route,
+    arguments = listOf(navArgument("noteId") { type = NavType.IntType })
+) { backStackEntry ->
+    val noteId = backStackEntry.arguments?.getInt("noteId") ?: return@composable
+    NoteDetailScreen(noteId = noteId, ...)
+}
+```
+
+### Bottom Navigation dengan `launchSingleTop`
+```kotlin
+navController.navigate(item.route) {
+    popUpTo(Screen.Notes.route) { saveState = true }
+    launchSingleTop = true
+    restoreState = true
+}
 ```
 
 ---
 
-## Komponen UI yang Digunakan
+## Screenshot
 
-`Column` · `Row` · `Box` · `Card` · `Text` · `Button` · `OutlinedButton` · `Icon` · `HorizontalDivider` · `Modifier`
+### 📝 Notes Screen
+![Notes Screen](screenshots/screen_notes.png)
 
----
+### 🔍 Note Detail Screen
+![Note Detail](screenshots/screen_detail.png)
 
-## Fitur Tambahan (Bonus)
+### ➕ Add Note Screen
+![screen_add.png](screenshots/screen_add.png) 
 
-- **AnimatedVisibility** — section Informasi Kontak dapat disembunyikan/ditampilkan dengan animasi `fadeIn + slideInVertically`
-- **AppColors object** — semua warna terpusat di `Theme.kt` agar mudah diubah
+### ✏️ Edit Note Screen
+![Edit Note](screenshots/screen_edit.png)
+
+### ❤️ Favorites Screen
+![Favorites](screenshots/screen_favorites.png)
+
+### 👤 Profile Screen
+![Profile](screenshots/screen_profile.png) 
 
 ---
 
 ## Cara Build & Menjalankan
 
 ### Android
-Buka project di Android Studio, pilih konfigurasi `composeApp`, lalu klik **Run**.
-
-Atau lewat terminal:
 ```bash
 ./gradlew :composeApp:assembleDebug
 ```
+Atau klik **Run** di Android Studio dengan konfigurasi `composeApp`.
 
 ### Desktop
 ```bash
@@ -113,42 +200,35 @@ Atau lewat terminal:
 
 ---
 
-## Screenshot
-
-### 🖥️ Desktop
-
-![Desktop Screenshot](screenshots/screenshots_desktop.png)
-
-### 📱 Android
-
-![Android Screenshot](screenshots/screenshots_android.png)
-![Profile](screenshots/screenshots_profile.png)
-![Edit](screenshots/screenshots_edit.png)
-![Dark Mode](screenshots/screenshots_darkmode.png)
-
----
-
 ## Dependencies Utama
 
 ```toml
 # gradle/libs.versions.toml
-compose-multiplatform = "1.7.x"
+composeMultiplatform = "1.10.0"
+androidx-lifecycle   = "2.9.6"
+navigation           = "2.9.0-beta01"
+multiplatformSettings = "1.1.1"
 ```
 
 ```kotlin
-// composeApp/build.gradle.kts
-commonMain.dependencies {
-    implementation(compose.material3)
-    implementation(compose.materialIconsExtended)
-    implementation(compose.foundation)
-}
+// composeApp/build.gradle.kts — commonMain
+implementation(libs.compose.material3)
+implementation(libs.compose.materialIconsExtended)
+implementation(libs.androidx.lifecycle.viewmodelCompose)
+implementation(libs.androidx.lifecycle.runtimeCompose)
+implementation(libs.androidx.navigation.compose)
+implementation(libs.multiplatform.settings)
 ```
 
 ---
 
-## Informasi Pengumpulan
+## Perubahan dari Minggu 4
 
-- **Repository:** push ke GitHub repository yang sama dengan tugas sebelumnya
-- **README:** sertakan screenshot aplikasi di Android/Desktop
-- **Deadline:** Sebelum Pertemuan 4
-- **Bobot:** 4%
+| Minggu 4 | Minggu 5 |
+|----------|----------|
+| Single screen (Profile only) | Multi-screen dengan Bottom Navigation |
+| Tidak ada navigasi | NavHost + NavController + Routes |
+| Tidak ada Notes feature | Full Notes CRUD (Add, View, Edit, Delete, Favorite) |
+| `App.kt` berisi semua UI | UI dipecah ke `screens/`, `navigation/`, `components/` |
+
+---
