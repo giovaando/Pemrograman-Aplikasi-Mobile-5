@@ -163,7 +163,10 @@ navController.navigate(item.route) {
 
 ---
 
-## Screenshot
+## Screenshot dan Video
+
+### Link Youtube
+https://youtube.com/shorts/YlGOKDrK72U?feature=share 
 
 ### 📝 Notes Screen
 ![Notes Screen](screenshots/screen_notes.png)
