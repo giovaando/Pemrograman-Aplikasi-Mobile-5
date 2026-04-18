@@ -45,6 +45,7 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(libs.multiplatform.settings)
             implementation(libs.multiplatform.settings.noarg)
+            implementation(libs.androidx.navigation.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
